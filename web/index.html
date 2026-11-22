@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>RayCity Workshop</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header>
+  <div class="brand">RayCity <b>Workshop</b></div>
+  <nav id="tabs">
+    <button data-tab="viewer" class="on">3D Preview</button>
+    <button data-tab="decal">Decal</button>
+    <button data-tab="plate">Plate</button>
+    <button data-tab="glass">Windshield</button>
+    <button data-tab="roof">Roof accessory</button>
+    <button data-tab="wheel">Wheels</button>
+    <button data-tab="shape">Reshape</button>
+    <button data-tab="effect">Set effect</button>
+    <button data-tab="map">Map</button>
+    <button data-tab="import">Import &amp; ask Claude</button>
+  </nav>
+  <div class="hint" id="status">starting…</div>
+</header>
+
+<main>
+<!-- ================= 3D PREVIEW ================= -->
+<section id="tab-viewer" class="tab on">
+  <aside class="side">
+    <div class="group">
+      <h3>Car</h3>
+      <input id="carSearch" placeholder="Search cars (name or number)…" autocomplete="off">
+      <select id="carSelect" size="7"></select>
+      <div class="row small"><span id="carInfo" class="muted"></span></div>
+    </div>
+    <div class="group">
+      <h3>Paint</h3>
+      <div class="row"><label>Colour 1 <input type="color" id="paint0" value="#3a6ea5"></label>
+        <label>2 <input type="color" id="paint1" value="#e8e8e8"></label>
+        <label>3 <input type="color" id="paint2" value="#1d2230"></label></div>
+      <div class="row presets" id="paintPresets"></div>
+    </div>
+    <div class="group">
+      <h3>Decal</h3>
+      <div class="row"><select id="decalSource"><option value="none">None</option><option value="game">Game decal…</option><option value="mine">My decals…</option></select></div>
+      <input id="decalSearch" placeholder="Search…" class="hidden">
+      <select id="decalList" size="6" class="hidden"></select>
+      <div class="row hidden" id="decalColors"><label>Decal colours <input type="color" id="dcol0"> <input type="color" id="dcol1"> <input type="color" id="dcol2"></label></div>
+    </div>
+    <div class="group">
+      <h3>Plate</h3>
+      <div class="row"><select id="plateSource"><option value="none">Game default</option><option value="game">Game plate…</option><option value="mine">My plates…</option></select></div>
+      <input id="plateSearch" placeholder="Search…" class="hidden">
+      <select id="plateList" size="6" class="hidden"></select>
+    </div>
+    <div class="group">
+      <h3>Windshield</h3>
+      <div class="row"><select id="glassSource"><option value="none">Plain glass</option><option value="game">Game glass…</option><option value="mine">My windshields…</option></select></div>
+      <input id="glassSearch" placeholder="Search…" class="hidden">
+      <select id="glassList" size="6" class="hidden"></select>
+      <div class="row hidden" id="glassColors"><label>Tint colours <input type="color" id="gcol0"> <input type="color" id="gcol1"> <input type="color" id="gcol2"></label></div>
+    </div>
+    <div class="group">
+      <h3>Roof accessory</h3>
+      <div class="row"><select id="lampSource"><option value="none">None</option><option value="game">Game accessory…</option><option value="mine">My accessories…</option></select></div>
+      <input id="lampSearch" placeholder="Search…" class="hidden">
+      <select id="lampList" size="6" class="hidden"></select>
+    </div>
+    <div class="group">
+      <h3>Wheels</h3>
+      <div class="row"><select id="wheelSource"><option value="none">Car's default</option><option value="game">Game wheel…</option><option value="mine">My wheels…</option></select></div>
+      <input id="wheelSearch" placeholder="Search…" class="hidden">
+      <select id="wheelList" size="6" class="hidden"></select>
+    </div>
+    <div class="group">
+      <h3>Set effect</h3>
+      <div class="row"><select id="effectSource"><option value="none">None</option><option value="game">Game set effect…</option><option value="mine">My effects…</option></select></div>
+      <input id="effectSearch" placeholder="Search…" class="hidden">
+      <select id="effectList" size="6" class="hidden"></select>
+    </div>
+    <details class="group" id="partsBox">
+      <summary><h3>Body kit parts</h3></summary>
+      <div id="partsList"></div>
+    </details>
+  </aside>
+  <div class="stage"><div class="viewer-slot"></div></div>
+</section>
+
+<!-- ================= DECAL ================= -->
+<section id="tab-decal" class="tab">
+  <aside class="side wide">
+    <div class="group">
+      <h3>1 · Picture</h3>
+      <div class="drop" id="decalDrop">Drop a picture here or <u>choose a file</u><br><span class="muted">PNG, JPG, GIF or BMP</span><input type="file" id="decalFile" accept="image/*" hidden></div>
+      <img id="decalThumb" class="thumb hidden" alt="">
+    </div>
+    <div class="group">
+      <h3>2 · Settings</h3>
+      <label class="col">Name <span class="muted">(lowercase, digits, _ )</span><input id="decalName" placeholder="my_logo"></label>
+      <label class="col">Layout
+        <select id="decalLayout">
+          <option value="sides">Both sides of the car</option><option value="top">Hood / roof</option>
+          <option value="sides+top">Sides + hood/roof</option><option value="wrap">Full wrap (sides + top)</option>
+          <option value="raw">My picture is the finished 512×512 template</option>
+        </select></label>
+      <label class="col">Size <output id="decalScaleOut">0.9</output><input type="range" id="decalScale" min="0.1" max="1" step="0.05" value="0.9"></label>
+      <label class="col">Position along the car (rear → front) <output id="decalPosOut">0.5</output><input type="range" id="decalPos" min="0" max="1" step="0.05" value="0.5"></label>
+      <label class="check"><input type="checkbox" id="decalMirror"> Mirror the right side (picture faces forward on both sides)</label>
+      <label class="check"><input type="checkbox" id="decalRemoveBg"> Remove the plain background</label>
+      <label class="check"><input type="checkbox" id="decalRecolor"> Players can recolour it (3-colour decal)</label>
+      <label class="col">GIF frame <input type="number" id="decalFrame" min="0" value="0"></label>
+      <div class="row"><button id="decalMake" class="primary">Make decal</button><span class="muted" id="decalMsg"></span></div>
+    </div>
+    <div class="group">
+      <h3>3 · Package for the developer</h3>
+      <div id="decalPkgList" class="checklist"></div>
+      <div class="row"><button id="decalPkg">Build package</button></div>
+      <p class="muted small">Writes <code>decal_tool\out\package\</code>: copies of decal4.jmd, decalinfo.jmd and FileInfo.0m. Nothing in the game folders is changed.</p>
+    </div>
+  </aside>
+  <div class="stage split">
+    <div class="viewer-slot"></div>
+    <div class="panel-bottom"><pre id="decalLog" class="log"></pre><div id="decalShots" class="shots"></div></div>
+  </div>
+</section>
+
+<!-- ================= PLATE ================= -->
+<section id="tab-plate" class="tab">
+  <aside class="side wide">
+    <div class="group">
+      <h3>Plate design <span class="muted">128 × 64</span></h3>
+      <canvas id="plateCanvas" width="128" height="64" class="editor plate"></canvas>
+      <div class="row small muted">Drag the picture or text on the plate to move it.</div>
+    </div>
+    <div class="group">
+      <h3>Background</h3>
+      <div class="row"><label>Colour <input type="color" id="plBg" value="#f2f0e6"></label>
+        <label>Fade to <input type="color" id="plBg2" value="#f2f0e6"></label>
+        <label>Border <input type="color" id="plBorder" value="#20242c"></label>
+        <label>Width <input type="number" id="plBorderW" value="3" min="0" max="10" class="num"></label></div>
+      <div class="row"><label class="check"><input type="checkbox" id="plRound" checked> Rounded corners</label>
+        <label class="check"><input type="checkbox" id="plBolts" checked> Bolts</label></div>
+    </div>
+    <div class="group">
+      <h3>Picture</h3>
+      <div class="drop small" id="plateDrop">Drop a picture or <u>choose</u><input type="file" id="plateFile" accept="image/*" hidden></div>
+      <div class="row"><label>Size <input type="range" id="plImgScale" min="0.1" max="3" step="0.05" value="1"></label>
+        <label class="check"><input type="checkbox" id="plImgFill"> Fill whole plate</label>
+        <button id="plImgClear" class="ghost">Remove</button></div>
+    </div>
+    <div class="group">
+      <h3>Text</h3>
+      <input id="plText" value="SAMUI 77" maxlength="24">
+      <input id="plText2" value="" placeholder="Small second line (optional)" maxlength="32">
+      <div class="row"><label>Font <select id="plFont"></select></label>
+        <label>Size <input type="number" id="plSize" value="30" min="6" max="64" class="num"></label></div>
+      <div class="row"><label>Colour <input type="color" id="plColor" value="#1b2a4a"></label>
+        <label>Outline <input type="color" id="plOutline" value="#ffffff"></label>
+        <label>Width <input type="number" id="plOutlineW" value="0" min="0" max="8" class="num"></label></div>
+    </div>
+    <div class="group">
+      <h3>Save</h3>
+      <label class="col">Name <input id="plName" placeholder="samui_plate"></label>
+      <div class="row"><button id="plSave" class="primary">Make plate</button><span id="plMsg" class="muted"></span></div>
+      <div id="platePkgList" class="checklist"></div>
+      <div class="row"><button id="platePkg">Build package</button></div>
+    </div>
+  </aside>
+  <div class="stage split">
+    <div class="viewer-slot"></div>
+    <div class="panel-bottom"><pre id="plateLog" class="log"></pre></div>
+  </div>
+</section>
+
+<!-- ================= WINDSHIELD ================= -->
+<section id="tab-glass" class="tab">
+  <aside class="side wide">
+    <div class="group">
+      <h3>Windshield design <span class="muted">64 × 64, covers every window</span></h3>
+      <canvas id="glassCanvas" width="64" height="64" class="editor glass"></canvas>
+    </div>
+    <div class="group">
+      <h3>Type</h3>
+      <label class="check"><input type="radio" name="glMode" value="picture" checked> Picture: fixed colours</label>
+      <label class="check"><input type="radio" name="glMode" value="tint1"> Tint: players pick 1 colour</label>
+      <label class="check"><input type="radio" name="glMode" value="tint3"> Pattern: players pick 3 colours</label>
+      <div class="row"><label>Default colours <input type="color" id="glc0" value="#101418"> <input type="color" id="glc1" value="#3a7bd5"> <input type="color" id="glc2" value="#e0a84e"></label></div>
+    </div>
+    <div class="group">
+      <h3>Shading</h3>
+      <div class="row"><label>Darkness at top <input type="range" id="glTop" min="0" max="1" step="0.05" value="0.85"></label></div>
+      <div class="row"><label>Darkness at bottom <input type="range" id="glBottom" min="0" max="1" step="0.05" value="0.35"></label></div>
+      <p class="muted small">How strongly the window is tinted, as in the game's glass (alpha).</p>
+    </div>
+    <div class="group">
+      <h3>Picture / pattern</h3>
+      <div class="drop small" id="glassDrop">Drop a picture or <u>choose</u><input type="file" id="glassFile" accept="image/*" hidden></div>
+      <div class="row"><label>Size <input type="range" id="glImgScale" min="0.1" max="2" step="0.05" value="1"></label>
+        <label>Strength <input type="range" id="glImgAlpha" min="0" max="1" step="0.05" value="1"></label>
+        <button id="glImgClear" class="ghost">Remove</button></div>
+      <p class="muted small">For 3-colour patterns: red parts use colour 1, green colour 2, blue colour 3.</p>
+    </div>
+    <div class="group">
+      <h3>Save</h3>
+      <label class="col">Name <input id="glName" placeholder="night_tint"></label>
+      <div class="row"><button id="glSave" class="primary">Make windshield</button><span id="glMsg" class="muted"></span></div>
+      <div id="glassPkgList" class="checklist"></div>
+      <div class="row"><button id="glassPkg">Build package</button></div>
+    </div>
+  </aside>
+  <div class="stage split">
+    <div class="viewer-slot"></div>
+    <div class="panel-bottom"><pre id="glassLog" class="log"></pre></div>
+  </div>
+</section>
+
+<!-- ================= ROOF ACCESSORY ================= -->
+<section id="tab-roof" class="tab">
+  <aside class="side wide">
+    <div class="group">
+      <h3>1 · Model</h3>
+      <div class="drop" id="roofDrop">Drop an <b>OBJ</b> model (and its PNG texture) or <u>choose files</u><br><span class="muted">From Blender: File → Export → Wavefront (.obj), Z up, meters</span><input type="file" id="roofFile" accept=".obj,.png,.jpg" multiple hidden></div>
+      <div id="roofInfo" class="muted small"></div>
+    </div>
+    <div class="group">
+      <h3>2 · Fit on the roof</h3>
+      <div class="row"><label>Size <input type="range" id="rfScale" min="0.05" max="3" step="0.01" value="1"></label><output id="rfScaleOut">1</output></div>
+      <div class="row"><label>Turn <input type="range" id="rfRot" min="-180" max="180" step="5" value="0"></label><output id="rfRotOut">0°</output></div>
+      <div class="row"><label>Forward/back <input type="range" id="rfY" min="-1.5" max="1.5" step="0.01" value="0"></label>
+        <label>Up/down <input type="range" id="rfZ" min="-0.5" max="1" step="0.01" value="0"></label></div>
+      <div class="row"><button id="rfAuto" class="ghost">Sit on roof</button></div>
+    </div>
+    <div class="group">
+      <h3>3 · Glow effect</h3>
+      <select id="rfEffect"><option value="">No glow</option></select>
+      <p class="muted small">Reuses one of the game's existing light effects (the only animated option the game has).</p>
+    </div>
+    <div class="group">
+      <h3>4 · Save</h3>
+      <label class="col">Name <input id="rfName" placeholder="samui_lamp"></label>
+      <div class="row"><button id="rfSave" class="primary">Make accessory</button><span id="rfMsg" class="muted"></span></div>
+      <div id="lampPkgList" class="checklist"></div>
+      <div class="row"><button id="lampPkg">Build package</button></div>
+    </div>
+  </aside>
+  <div class="stage split">
+    <div class="viewer-slot"></div>
+    <div class="panel-bottom"><pre id="roofLog" class="log"></pre></div>
+  </div>
+</section>
+
+<!-- ================= WHEELS ================= -->
+<section id="tab-wheel" class="tab">
+  <aside class="side wide">
+    <div class="group">
+      <h3>1 · Rim</h3>
+      <label class="check"><input type="radio" name="whMode" value="repaint" checked> Repaint a game rim (new texture on its shape)</label>
+      <label class="check"><input type="radio" name="whMode" value="obj"> My own rim model (OBJ)</label>
+      <div id="whRepaintBox">
+        <input id="whSearch" placeholder="Search game wheels…">
+        <select id="whBase" size="6"></select>
+        <div class="muted small" id="whBaseInfo">Pick the rim whose shape you want to keep.</div>
+      </div>
+      <div id="whObjBox" class="hidden">
+        <div class="drop" id="wheelDrop">Drop an <b>OBJ</b> rim (and its PNG texture) or <u>choose files</u><br><span class="muted">Centred on the hub, about 0.68 m across (tyre included), metres</span><input type="file" id="wheelFile" accept=".obj,.png,.jpg" multiple hidden></div>
+        <div id="wheelInfo" class="muted small"></div>
+        <div class="row"><label>Axle along <select id="whAxle"><option value="x">X</option><option value="y" selected>Y</option><option value="z">Z</option></select></label>
+          <label class="check"><input type="checkbox" id="whFlip"> Flip (face points the other way)</label></div>
+        <div class="row"><label>Size <input type="range" id="whScale" min="0.1" max="3" step="0.01" value="1"></label><output id="whScaleOut">1</output>
+          <button id="whFit" class="ghost">Fit game size</button></div>
+      </div>
+    </div>
+    <div class="group">
+      <h3>2 · Texture <span class="muted">128 × 128</span></h3>
+      <canvas id="wheelCanvas" width="128" height="128" class="editor wheel"></canvas>
+      <div class="row"><label>Tint <input type="color" id="whTint" value="#d9a24f"></label>
+        <label>Strength <input type="range" id="whTintAmt" min="0" max="1" step="0.05" value="0"></label></div>
+      <div class="row"><label>Hue <input type="range" id="whHue" min="-180" max="180" step="5" value="0"></label>
+        <label>Brightness <input type="range" id="whBright" min="0.3" max="1.7" step="0.05" value="1"></label></div>
+      <div class="drop small" id="whLogoDrop">Drop a logo / picture or <u>choose</u><input type="file" id="whLogoFile" accept="image/*" hidden></div>
+      <div class="row"><label>Logo size <input type="range" id="whLogoScale" min="0.05" max="1.2" step="0.01" value="0.3"></label>
+        <label class="check"><input type="checkbox" id="whLogoRound" checked> Round</label>
+        <button id="whLogoClear" class="ghost">Remove</button></div>
+      <p class="muted small">Drag on the texture to move the logo. The rim's centre cap is usually in the middle of the big circle.
+        The game keeps the texture's alpha as shading, so it is kept from the base.</p>
+    </div>
+    <div class="group">
+      <h3>3 · Save</h3>
+      <label class="col">Name <input id="whName" placeholder="samui_rim"></label>
+      <div class="row"><button id="whSave" class="primary">Make wheel</button><span id="whMsg" class="muted"></span></div>
+      <div id="wheelPkgList" class="checklist"></div>
+      <div class="row"><button id="wheelPkg">Build package</button></div>
+      <p class="muted small">Each wheel gets a normal and a "wide" list entry, like the game's own rims.</p>
+    </div>
+  </aside>
+  <div class="stage split">
+    <div class="viewer-slot"></div>
+    <div class="panel-bottom"><pre id="wheelLog" class="log"></pre></div>
+  </div>
+</section>
+
+<!-- ================= SET EFFECT ================= -->
+<section id="tab-effect" class="tab">
+  <aside class="side wide">
+    <div class="group">
+      <h3>1 · Set effect</h3>
+      <input id="fxSearch" placeholder="Search set effects…">
+      <select id="fxList" size="9"></select>
+      <div id="fxInfo" class="muted small"></div>
+    </div>
+    <div class="group">
+      <h3>2 · Play</h3>
+      <div class="row"><button id="fxPlay">▶ Start</button><button id="fxEnd">■ End (fade out)</button>
+        <label class="check"><input type="checkbox" id="fxRepeat" checked> Repeat</label></div>
+      <div class="row"><label>Speed <input type="range" id="fxSpeed" min="0.1" max="2" step="0.05" value="1"></label><output id="fxSpeedOut">1×</output>
+        <label>Glow <input type="range" id="fxGlow" min="0.2" max="2" step="0.05" value="1"></label></div>
+      <p class="muted small">The planes, their textures, motion and visibility are the game's. The fades and blend modes inside the
+        files can't be read yet, so the preview draws every plane as additive glow.</p>
+    </div>
+    <div class="group">
+      <h3>3 · Make a new one from it</h3>
+      <div id="fxTexList"></div>
+      <p class="muted small">Recolour or replace any texture; the shape, motion and timing stay the same. Pictures are fitted to the
+        original texture's size.</p>
+    </div>
+    <div class="group">
+      <h3>4 · Save</h3>
+      <label class="col">Name <input id="fxName" placeholder="samui_glow"></label>
+      <div class="row"><button id="fxSave" class="primary">Make effect</button><span id="fxMsg" class="muted"></span></div>
+      <div id="effectPkgList" class="checklist"></div>
+      <div class="row"><button id="effectPkg">Build package</button></div>
+      <p class="muted small">Adds <code>EffectType_SetItem_WS_&lt;name&gt;</code> and the set-item option <code>US_WS_&lt;name&gt;</code>
+        to effect.jmd. The server's set item has to use that option name.</p>
+    </div>
+  </aside>
+  <div class="stage split">
+    <div class="viewer-slot"></div>
+    <div class="panel-bottom"><pre id="effectLog" class="log"></pre></div>
+  </div>
+</section>
+
+<!-- ================= MAP ================= -->
+<section id="tab-map" class="tab">
+  <aside class="side">
+    <div class="group">
+      <h3>Map</h3>
+      <select id="mapArea"></select>
+      <div id="mapAreaInfo" class="muted small"></div>
+    </div>
+    <div class="group">
+      <h3>Tiles <span class="muted">512 m each</span></h3>
+      <canvas id="mapGrid" width="240" height="240" class="mapgrid"></canvas>
+      <div class="row small muted" id="mapTileInfo">Click a tile to load it. Shift-click adds tiles.</div>
+      <div class="row"><label class="check"><input type="checkbox" id="mapNeighbours" checked> Load the 8 tiles around it too</label></div>
+    </div>
+    <div class="group">
+      <h3>Show</h3>
+      <label class="check"><input type="radio" name="mapLm" value="1" checked> Textures × render map (lightmap)</label>
+      <label class="check"><input type="radio" name="mapLm" value="0"> Textures only</label>
+      <label class="check"><input type="radio" name="mapLm" value="2"> Render map (lightmap) only</label>
+      <label class="check"><input type="checkbox" id="mapObjects" checked> Placed objects (props)</label>
+      <label class="check"><input type="checkbox" id="mapCar"> The car from the 3D Preview, at the tile centre (for scale)</label>
+      <div class="row"><button class="ghost" id="mapTop">Top view</button><button class="ghost" id="mapLow">Low view</button></div>
+    </div>
+    <div class="group">
+      <h3>Render maps of this tile</h3>
+      <div id="mapLmList" class="shots"></div>
+    </div>
+  </aside>
+  <div class="stage"><div class="mapview"><canvas id="mapGl"></canvas><div class="vhelp muted">drag = turn · right-drag = move · wheel = zoom · double-click = reset</div><div id="mapBusy" class="busy hidden">loading…</div></div></div>
+</section>
+
+<!-- ================= RESHAPE ================= -->
+<section id="tab-shape" class="tab">
+  <aside class="side wide">
+    <div class="group">
+      <h3>1 · What to reshape</h3>
+      <label class="check"><input type="radio" name="rsMode" value="edit" checked> <b>Edit car</b>: fix broken spots, change the body or a fitted part</label>
+      <label class="check"><input type="radio" name="rsMode" value="set"> <b>Shape new set</b>: make a new body-kit part from an existing one</label>
+      <div id="rsEditBox"><label class="col">Piece <select id="rsPiece"></select></label></div>
+      <div id="rsSetBox" class="hidden">
+        <div class="row"><label>Part <select id="rsFolder"></select></label><label>From <select id="rsBase"></select></label></div>
+        <label class="col">New part name <input id="rsName" placeholder="wide_lip"></label>
+      </div>
+      <div id="rsInfo" class="muted small"></div>
+    </div>
+    <div class="group">
+      <h3>2 · Brush</h3>
+      <div class="row seg" id="rsTools">
+        <button data-tool="move" class="on" title="Grab and drag the surface">Move</button>
+        <button data-tool="push" title="Drag up / down: out / in along the surface">Push / pull</button>
+        <button data-tool="smooth" title="Rub to even out bumps and spikes">Smooth</button>
+        <button data-tool="flatten" title="Rub to flatten towards where you clicked">Flatten</button>
+        <button data-tool="restore" title="Rub to bring back the original shape">Restore</button>
+      </div>
+      <div class="row"><label>Size <input type="range" id="rsRadius" min="0.02" max="1.2" step="0.01" value="0.25"></label><output id="rsRadiusOut">0.25 m</output></div>
+      <div class="row"><label>Strength <input type="range" id="rsStrength" min="0.05" max="1" step="0.05" value="0.5"></label>
+        <label class="check"><input type="checkbox" id="rsMirror" checked> Mirror left / right</label></div>
+      <label class="check"><input type="checkbox" id="rsAllPieces" checked> All pieces together (body + fitted parts, Edit car only)</label>
+      <p class="muted small">Left-drag on the car = brush · right-drag = turn · shift-drag = move the view · wheel = zoom</p>
+    </div>
+    <div class="group">
+      <h3>3 · Whole piece</h3>
+      <div class="row"><label>Size % X <input type="number" id="rsSx" value="100" class="num"></label><label>Y <input type="number" id="rsSy" value="100" class="num"></label><label>Z <input type="number" id="rsSz" value="100" class="num"></label></div>
+      <div class="row"><label>Move cm X <input type="number" id="rsMx" value="0" class="num"></label><label>Y <input type="number" id="rsMy" value="0" class="num"></label><label>Z <input type="number" id="rsMz" value="0" class="num"></label></div>
+      <div class="row"><label>Inflate cm <input type="number" id="rsInf" value="0" class="num"></label><button id="rsApply">Apply</button></div>
+      <p class="muted small">Size is measured from the piece's middle (X = across, Y = along the car, front = −Y, Z = up).</p>
+    </div>
+    <div class="group">
+      <h3>4 · Broken spots</h3>
+      <div class="row"><button id="rsFind">Find</button><button id="rsNext" class="ghost">Next ›</button><button id="rsFix">Fix all</button></div>
+      <div id="rsSpots" class="muted small">Looks for spikes (points pulled out of the surface) and stray stretched triangles.</div>
+    </div>
+    <div class="group">
+      <h3>Clean texture <span class="muted">(broken pixels)</span></h3>
+      <div id="clInfo" class="muted small"></div>
+      <div class="row"><label>Colours <input type="range" id="clColors" min="4" max="32" step="1" value="16"></label><output id="clColorsOut">16</output></div>
+      <label class="check"><input type="checkbox" id="clMask" checked> Also clean the paint mask (blocky colour 1/2/3 areas)</label>
+      <label class="check"><input type="checkbox" id="clSpecks" checked> Remove specks (colour islands under 4 cm²)</label>
+      <div class="row"><button id="clRun" class="primary">Clean &amp; preview</button><button id="clUndo" class="ghost">Undo clean</button></div>
+      <div id="clPalette" class="row"></div>
+      <div id="clMsg" class="muted small"></div>
+      <p class="muted small">For cars whose details (vents, trim, lights) come from the small _color picture: every such triangle
+        becomes one solid colour from a clean palette, so edges follow the model instead of stair-stepped pixels. Clean first,
+        then reshape: cleaning starts again from the original car.</p>
+    </div>
+    <div class="group">
+      <h3>5 · Save</h3>
+      <div class="row"><button id="rsUndo">Undo</button><button id="rsRedo">Redo</button><button id="rsReset" class="ghost">Reset piece</button></div>
+      <div class="row"><button id="rsSave" class="primary">Save &amp; build package</button><button id="rsLoad" class="ghost">Load saved edits</button></div>
+      <div id="rsMsg" class="muted small"></div>
+      <p class="muted small">Writes all three detail levels (the far ones follow your change) into a copy of the car:
+        <code>out\package\car_&lt;car&gt;\</code>. New sets get a list.xml row with the base part's texture and icon.</p>
+    </div>
+  </aside>
+  <div class="stage split">
+    <div class="viewer-slot"></div>
+    <div class="panel-bottom"><pre id="shapeLog" class="log"></pre></div>
+  </div>
+</section>
+
+<!-- ================= IMPORT / ASK CLAUDE ================= -->
+<section id="tab-import" class="tab">
+  <div class="page">
+    <h2>Import &amp; ask Claude</h2>
+    <p class="muted">Drop in any files (pictures, models, game files, screenshots) and write what you want. The workshop saves it as a
+      request. Then paste the line it gives you into the Claude Code session, and Claude does the work and writes the answer back here.</p>
+    <div class="group">
+      <label class="col">What is it for?
+        <select id="hoType"><option>New decal</option><option>New plate</option><option>New windshield</option><option>New roof accessory</option><option>New wheel</option><option>New set effect</option><option>Map</option><option>New car</option><option>Fix or change something</option><option>Question</option><option>Other</option></select></label>
+      <label class="col">Short title <input id="hoTitle" placeholder="e.g. glowing coconut lamp"></label>
+      <label class="col">What should Claude do? <textarea id="hoText" rows="7" placeholder="Describe it in your own words, any language. Example: Make this logo a 3-colour decal on the hood of the Clio, colours blue/white/gold."></textarea></label>
+      <div class="drop" id="hoDrop">Drop files here or <u>choose files</u><input type="file" id="hoFile" multiple hidden></div>
+      <ul id="hoFiles" class="files"></ul>
+      <label class="check"><input type="checkbox" id="hoContext" checked> Include what is open in the 3D preview (car, decal, plate…)</label>
+      <div class="row"><button id="hoSend" class="primary">Save request</button><span id="hoMsg" class="muted"></span></div>
+    </div>
+    <div class="group hidden" id="hoResult">
+      <h3>Now paste this into Claude</h3>
+      <div class="row"><code id="hoLine" class="line"></code><button id="hoCopy">Copy</button></div>
+    </div>
+    <div class="group">
+      <h3>Requests</h3>
+      <div id="hoList"></div>
+    </div>
+  </div>
+</section>
+</main>
+
+<div id="viewerHost" class="viewer">
+  <canvas id="gl"></canvas>
+  <div class="toolbar">
+    <button data-view="front34">Front ¾</button><button data-view="side">Side</button><button data-view="rear34">Rear ¾</button>
+    <button data-view="front">Front</button><button data-view="rear">Rear</button><button data-view="top">Top</button>
+    <span class="sep"></span>
+    <label class="check"><input type="checkbox" id="vSpin"> Spin</label>
+    <label class="check" title="The wheels roll"><input type="checkbox" id="vWheels"> Wheels turn</label>
+    <label class="check" title="Lighting like the game's car shader: sun light + sky reflection"><input type="checkbox" id="vLook"> Game look</label>
+    <label class="check" title="Head and tail lights on"><input type="checkbox" id="vLights"> Lights</label>
+    <label class="check" title="Open / close the doors"><input type="checkbox" id="vDoors"> Doors</label>
+    <label class="check" title="Play the set effects and lamp glow"><input type="checkbox" id="vFx" checked> Effects</label>
+    <label class="check"><input type="checkbox" id="vTex"> Texture</label>
+    <button id="vShot">Screenshot</button>
+  </div>
+  <img id="vTexImg" class="texpeek hidden" alt="composite texture">
+  <div class="vhelp muted">drag = turn · right-drag = move · wheel = zoom · double-click = reset</div>
+  <div id="vBusy" class="busy hidden">loading…</div>
+</div>
+
+<script src="compose.js"></script>
+<script src="viewer.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

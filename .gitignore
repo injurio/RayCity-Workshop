@@ -1,0 +1,14 @@
+# Made by the Workshop at run time (never commit)
+workshop.config.json
+cache/
+out/
+inbox/
+decal_tool/out/
+__pycache__/
+*.tmp
+*.tmp.js
+
+# Release builds (published on GitHub Releases)
+release/dist/
+decal_tool/research/*/
+decal_tool/research/*.dds
